@@ -106,7 +106,7 @@ const getImagesData = async () => {
     return images_results;
 };
 
-const saveAndSendRandomImage = async () => {
+const saveAndSendRandomImage = async (chatId) => {
     try {
         const imagesData = await getImagesData();
         const randomImage = imagesData[Math.floor(Math.random() * imagesData.length)];
@@ -141,9 +141,9 @@ const saveAndSendRandomImage = async () => {
 
 // The task runs every N minutes
 const N = '30';
-cron.schedule(`*/${N} * * * *`, saveAndSendRandomImage);
+cron.schedule(`*/${N} * * * *`, () => saveAndSendRandomImage(chatId));
 
-saveAndSendRandomImage();
+saveAndSendRandomImage(chatId);
 
 bot.on('message', msg => {
     const { id } = msg.chat;
@@ -158,6 +158,7 @@ bot.onText(/\/start/, msg => {
 <b>Доступные команды:</b>
 - /start
 - /about
+- /meme
 
         `;
 
@@ -178,3 +179,9 @@ bot.onText(/\/about/, msg => {
 
     bot.sendMessage(id, message, { parse_mode: 'HTML' });
 });
+
+bot.onText(/\/meme/, async (msg) => {
+    const { id } = msg.chat;
+    await saveAndSendRandomImage(id);
+});
+
