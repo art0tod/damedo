@@ -29,6 +29,36 @@ const downloadImage = async (url, filename) => {
     });
 };
 
+const checkAndRemoveImages = (imageDir, maxDirSizeMB, imagesData) => {
+    const dirSize = getDirectorySize(imageDir);
+    const maxSizeBytes = maxDirSizeMB * 1024 * 1024;
+
+    if (dirSize > maxSizeBytes && imagesData.length > 0) {
+        const files = fs.readdirSync(imageDir);
+        const imagesToRemove = files.slice(0, imagesData.length);
+
+        imagesToRemove.forEach(file => {
+            const filePath = path.join(imageDir, file);
+            fs.unlinkSync(filePath);
+        });
+
+        console.log(`Removed ${imagesToRemove.length} images to reduce directory size.`);
+    }
+};
+
+const getDirectorySize = (dir) => {
+    let totalSize = 0;
+
+    const files = fs.readdirSync(dir);
+    files.forEach(file => {
+        const filePath = path.join(dir, file);
+        const stats = fs.statSync(filePath);
+        totalSize += stats.size;
+    });
+
+    return totalSize;
+};
+
 const selectRandom = () => {
     const userAgents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36",
@@ -91,6 +121,8 @@ const saveAndSendRandomImage = async () => {
         await downloadImage(imageUrl, filename);
 
         console.log('Image saved:', filename);
+
+        checkAndRemoveImages(imageDir, 100, imagesData);
 
         const message = `
 
