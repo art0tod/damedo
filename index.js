@@ -72,8 +72,8 @@ const selectRandom = () => {
     return userAgents[randomNumber];
 };
 
-let query = "смешной мем";
-const query_lang = "ru"
+let query = "ржачный мем";
+const query_lang = "ru";
 
 const getImagesData = async () => {
     const user_agent = selectRandom();
@@ -84,7 +84,7 @@ const getImagesData = async () => {
 
     const response = await unirest
         .get(
-            `https://www.google.com/search?q=${encodeURIComponent(formatedQuery)}&hl=${query_lang}&tbm=isch&asearch=ichunk&async=_id:rg_s,_pms:s,_fmt:pc&sourceid=chrome&ie=UTF-8`
+            `https://www.google.com/search?q=${encodeURIComponent(formatedQuery)}&hl=${query_lang}&tbs=qdr:w&tbm=isch&asearch=ichunk&async=_id:rg_s,_pms:s,_fmt:pc&sourceid=chrome&ie=UTF-8`
         )
         .headers(header)
         .encoding('utf-8');
@@ -124,15 +124,33 @@ const saveAndSendRandomImage = async (chatId) => {
 
         checkAndRemoveImages(imageDir, 100, imagesData);
 
+        const fileCount = fs.readdirSync(imageDir).length;
+
         const message = `
 
-<b>Название:</b> ${randomImage.title}
-<b>Источник:</b> ${randomImage.link}
-<b>Запрос:</b> ${query}
-<i>За любыми вопросами и пожеланиями обращайтесь к @art0tod</i>
+*😄 Рандомный мем из интернета № ${fileCount} 😁*
+*Источник:* [Ссылка](${randomImage.link})
+*Дисклеймер:*
+_Данный бот отправляет случайные мемы из интернета, взятые из открытых источников._
+_Обратите внимание, что автор бота не несёт ответственности за содержание изображений,_
+_так как они выбираются случайным образом._
+_Если вы встретите что-то неподобающее, пожалуйста, имейте это в виду._
 
         `;
-        await bot.sendPhoto(chatId, filename, { caption: message, parse_mode: 'HTML', disable_notification: true });
+
+         const options = {
+            caption: message,
+            parse_mode: 'Markdown',
+            disable_notification: true,
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: '😂 Ещё мем 🤣', callback_data: 'get_meme' }],
+                    [{ text: '😱 Удалить, это не мем! 😰', callback_data: 'delete' }]
+                ]
+            }
+        };
+
+        const sentMessage = await bot.sendPhoto(chatId, filename, options);
 
     } catch (error) {
         console.error('Error saving and sending image:', error);
@@ -140,7 +158,7 @@ const saveAndSendRandomImage = async (chatId) => {
 };
 
 // The task runs every N minutes
-const N = '30';
+const N = '60';
 cron.schedule(`*/${N} * * * *`, () => saveAndSendRandomImage(chatId));
 
 saveAndSendRandomImage(chatId);
@@ -174,7 +192,7 @@ bot.onText(/\/about/, msg => {
 - <b>Разработчик бота:</b> @art0tod
 - <b>Цель бота:</b> автоматизировать получениe позитивных эмоций.
 - <b>Как работает:</b> бот отправляет в заданную группу с определённым интервалом сообщение с картинкой и подписью с источниками и прочей полезной информацией.
-- <b>Как пользоваться:</b> добавить бота в нужную группу (обращаться к разработчику)
+- <b>Как пользоваться:</b> добавить бота в нужную группу (обращаться к разработчику) или просто прописать /meme, чтобы отправить мем в текущий чат.
         `;
 
     bot.sendMessage(id, message, { parse_mode: 'HTML' });
@@ -183,5 +201,21 @@ bot.onText(/\/about/, msg => {
 bot.onText(/\/meme/, async (msg) => {
     const { id } = msg.chat;
     await saveAndSendRandomImage(id);
+});
+
+bot.on('callback_query', async (callbackQuery) => {
+    const { message_id, chat: { id } } = callbackQuery.message;
+    const data = callbackQuery.data;
+
+    try {
+        if (data === 'get_meme') {
+            await saveAndSendRandomImage(id);
+        } else if (data === 'delete') {
+            await bot.deleteMessage(id, message_id);
+        }
+        await bot.answerCallbackQuery(callbackQuery.id);
+    } catch (error) {
+        console.error('Error handling callback query:', error);
+    }
 });
 
